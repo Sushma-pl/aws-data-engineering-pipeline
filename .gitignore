@@ -1,0 +1,19 @@
+# Environment variables / secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Data files
+data/source/
+data/metadata/
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
