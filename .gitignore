@@ -11,6 +11,9 @@ venv/
 data/source/
 data/metadata/
 
+# Rough folder
+Rough/
+
 # IDE
 .vscode/
 
