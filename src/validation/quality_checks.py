@@ -49,15 +49,12 @@ def run_quality_checks(
     # 3. DATETIME CHECKS
     # ---------------------------------------------------------
 
-    pickup_after_dropoff = (
-        df["tpep_pickup_datetime"]
-        > df["tpep_dropoff_datetime"]
-    )
+    pickup_col  = pd.to_datetime(df["tpep_pickup_datetime"],  errors="coerce")
+    dropoff_col = pd.to_datetime(df["tpep_dropoff_datetime"], errors="coerce")
 
-    duration_minutes = (
-        df["tpep_dropoff_datetime"]
-        - df["tpep_pickup_datetime"]
-    ).dt.total_seconds() / 60
+    pickup_after_dropoff = pickup_col > dropoff_col
+
+    duration_minutes = (dropoff_col - pickup_col).dt.total_seconds() / 60
 
     zero_duration = duration_minutes == 0
     long_duration = duration_minutes > 1440

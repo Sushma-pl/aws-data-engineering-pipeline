@@ -23,5 +23,6 @@ Rough/
 .DS_Store
 Thumbs.db
 
-.kiro
+.kiro/
 .pytest_cache/
+.hypothesis/
