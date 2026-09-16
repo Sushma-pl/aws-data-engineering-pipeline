@@ -22,3 +22,6 @@ Rough/
 # OS
 .DS_Store
 Thumbs.db
+
+.kiro
+.pytest_cache/
