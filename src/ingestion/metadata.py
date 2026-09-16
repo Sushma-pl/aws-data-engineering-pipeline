@@ -3,46 +3,55 @@ from pathlib import Path
 
 from .config import METADATA_PATH
 
-def write_ingestion_matadata(
-        file_path: str,
-        ingestion_timestamp: str,
-        file_size: int,
-        target_bucket: str,
-        target_key:str,
-        status:str,
-):
 
-    metadata_file = {
-        "source_file": Path(file_path).name,
-        "source_path": str(file_path),
-        "file_size_in_bytes": file_size,
-        "ingestion_timestamp": ingestion_timestamp[:10],
-        "target_bucket": target_bucket,
-        "target_key": target_key,
-        "status": status
+def write_ingestion_metadata(
+    file_path: str,
+    ingestion_timestamp: str,
+    file_size: int,
+    target_bucket: str,
+    target_key: str,
+    status: str,
+) -> None:
+    """
+    Append an ingestion event record to the metadata log.
+
+    Idempotent: if a record with the same source_file AND status already
+    exists, the write is skipped to prevent duplicates on re-runs.
+
+    Args:
+        file_path:            Local path to the source file.
+        ingestion_timestamp:  Full ISO-8601 UTC timestamp (NOT truncated).
+        file_size:            File size in bytes.
+        target_bucket:        S3/MinIO bucket where the file was written.
+        target_key:           S3 object key of the written file.
+        status:               "SUCCESS" or "FAILED".
+    """
+    new_record = {
+        "source_file":         Path(file_path).name,
+        "source_path":         str(file_path),
+        "file_size_in_bytes":  file_size,
+        "ingestion_timestamp": ingestion_timestamp,   # full ISO string, not [:10]
+        "target_bucket":       target_bucket,
+        "target_key":          target_key,
+        "status":              status,
     }
 
-    new_record = pd.DataFrame([metadata_file])
+    new_df = pd.DataFrame([new_record])
 
     if Path(METADATA_PATH).exists():
-        existing_metadata = pd.read_parquet(METADATA_PATH)
-        already_processed =(
-            (existing_metadata['source_file'] == metadata_file['source_file']) &
-            (existing_metadata['status'] == metadata_file['status'])
+        existing = pd.read_parquet(METADATA_PATH)
+
+        already_logged = (
+            (existing["source_file"] == new_record["source_file"]) &
+            (existing["status"]      == new_record["status"])
         ).any()
 
-        if already_processed:
-            return
-        
-        updated_metadata = pd.concat(
-            [existing_metadata, new_record],
-            ignore_index=True
-        )
+        if already_logged:
+            return  # idempotent: do not create a duplicate row
 
+        updated = pd.concat([existing, new_df], ignore_index=True)
     else:
-        updated_metadata = new_record
+        updated = new_df
 
-    updated_metadata.to_parquet(
-        METADATA_PATH, 
-        index=False
-    )
+    Path(METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
+    updated.to_parquet(METADATA_PATH, index=False)
